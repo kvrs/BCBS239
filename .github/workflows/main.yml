@@ -1,1 +1,50 @@
-#
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'Process_1/pytest.py'
+      - 'Process_1/sm.py'
+      - 'Process_1/ptes.py'
+
+jobs:
+  trigger_jenkins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Trigger Jenkins for pytest.py
+        if: contains(github.event.head_commit.message, 'Process_1/pytest.py')
+        run: |
+          curl -X POST "$JENKINS_URL/job/your-jenkins-job-name/buildWithParameters?token=$JENKINS_TOKEN&tag=on-prem"
+        env:
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+
+      - name: Trigger Jenkins for ptes.py
+        if: contains(github.event.head_commit.message, 'Process_1/ptes.py')
+        run: |
+          curl -X POST "$JENKINS_URL/job/your-jenkins-job-name/buildWithParameters?token=$JENKINS_TOKEN&tag=on-prem"
+        env:
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+
+  trigger_gcp_cloud_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Trigger GCP Cloud Build for sm.py
+        if: contains(github.event.head_commit.message, 'Process_1/sm.py')
+        run: |
+          gcloud builds submit --config cloudbuild.yaml --substitutions=_TAG=GCP-Cloud
